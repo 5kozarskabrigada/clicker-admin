@@ -89,29 +89,44 @@ function openTab(evt, tabName) {
 
 
 async function loadUsers(searchTerm = '') {
-    const { data: users, error } = await sbClient.from('users').select('*').order('coins', { ascending: false });
-    if (error) { console.error('Error:', error); return; }
+    let query = sbClient.from('users').select('*').order('coins', { ascending: false });
+    if (searchTerm) {
+        query = query.ilike('username', `%${searchTerm}%`);
+    }
+
+    const { data: users, error } = await query;
+    if (error) { console.error('Error loading users:', error); return; }
 
     const usersList = document.getElementById('usersList');
     usersList.innerHTML = '';
+
     users.forEach(user => {
         const row = document.createElement('tr');
 
         const lastActive = new Date(user.last_active);
         const minutesAgo = (new Date() - lastActive) / 60000;
-        let onlineStatus = minutesAgo < 5
+        const onlineStatus = minutesAgo < 5
             ? `<span class="online-status online">Online</span>`
             : `<span class="online-status offline">${lastActive.toLocaleString()}</span>`;
 
-        let statusBadge = user.is_banned ? `<span class="status status-banned">Banned</span>` : user.is_admin ? `<span class="status status-admin">Admin</span>` : `<span class="status status-active">Active</span>`;
+        const statusBadge = user.is_banned
+            ? `<span class="status status-banned">Banned</span>`
+            : user.is_admin
+                ? `<span class="status status-admin">Admin</span>`
+                : `<span class="status status-active">Active</span>`;
+
+        const userCoins = parseFloat(user.coins).toFixed(16);
 
         row.innerHTML = `
-            <td>${user.id.substring(0, 8)}...</td>
-            <td>@${user.username || 'anon'}</td>
-            <td>${parseFloat(user.coins).toFixed(16)}</td>
+            <td class="user-id">${user.id}</td>
+            <td>@${user.username || 'anonymous'}</td>
+            <td>${userCoins}</td>
             <td>${onlineStatus}</td>
             <td>${statusBadge}</td>
-            <td><button onclick="editUser('${user.id}', '${user.username}', user.coins)">Edit</button></td>
+            <td>
+                <!-- THE FIX IS HERE: '${user.coins}' is now correctly passed as a string -->
+                <button onclick="editUser('${user.id}', '${user.username || 'anonymous'}', '${user.coins}')">Edit</button>
+            </td>
         `;
         usersList.appendChild(row);
     });
