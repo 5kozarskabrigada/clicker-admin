@@ -89,50 +89,29 @@ function openTab(evt, tabName) {
 
 
 async function loadUsers(searchTerm = '') {
-    let query = sbClient.from('users').select('*').order('coins', { ascending: false });
-    if (searchTerm) {
-        query = query.ilike('username', `%${searchTerm}%`);
-    }
-
-    const { data: users, error } = await query;
-    if (error) { console.error('Error loading users:', error); return; }
+    const { data: users, error } = await sbClient.from('users').select('*').order('coins', { ascending: false });
+    if (error) { console.error('Error:', error); return; }
 
     const usersList = document.getElementById('usersList');
     usersList.innerHTML = '';
-
     users.forEach(user => {
         const row = document.createElement('tr');
 
-        const lastActiveDate = new Date(user.last_active);
-        const now = new Date();
-        const minutesSinceLastActive = (now - lastActiveDate) / (1000 * 60);
+        const lastActive = new Date(user.last_active);
+        const minutesAgo = (new Date() - lastActive) / 60000;
+        let onlineStatus = minutesAgo < 5
+            ? `<span class="online-status online">Online</span>`
+            : `<span class="online-status offline">${lastActive.toLocaleString()}</span>`;
 
-        let onlineStatus;
-        if (minutesSinceLastActive < 5) 
-        {
-            onlineStatus = `<span class="online-status online">Online</span>`;
-        } 
-
-        else {
-            onlineStatus = `<span class="online-status offline">${lastActiveDate.toLocaleString()}</span>`;
-        }
-
-        let statusBadge;
-        if (user.is_banned) { statusBadge = `<span class="status status-banned">Banned</span>`; }
-        else if (user.is_admin) { statusBadge = `<span class="status status-admin">Admin</span>`; }
-        else { statusBadge = `<span class="status status-active">Active</span>`; }
-
-        const userCoins = parseFloat(user.coins).toFixed(10);
+        let statusBadge = user.is_banned ? `<span class="status status-banned">Banned</span>` : user.is_admin ? `<span class="status status-admin">Admin</span>` : `<span class="status status-active">Active</span>`;
 
         row.innerHTML = `
-            <td>${user.id}</td>
-            <td>@${user.username || 'anonymous'}</td>
-            <td>${userCoins}</td>
+            <td>${user.id.substring(0, 8)}...</td>
+            <td>@${user.username || 'anon'}</td>
+            <td>${parseFloat(user.coins).toFixed(10)}</td>
+            <td>${onlineStatus}</td>
             <td>${statusBadge}</td>
-            <td>${onlineStatus}</td> 
-            <td>
-                <button onclick="editUser('${user.id}', '${user.username || 'anonymous'}', ${user.coins})">Edit</button>
-            </td>
+            <td><button onclick="editUser('${user.id}', '${user.username}', user.coins)">Edit</button></td>
         `;
         usersList.appendChild(row);
     });

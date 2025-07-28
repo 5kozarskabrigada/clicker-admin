@@ -180,6 +180,7 @@ button:hover,
     padding: 4px 8px;
     border-radius: 4px;
     color: white;
+    white-space: nowrap;
 }
 
 .online-status.online {
