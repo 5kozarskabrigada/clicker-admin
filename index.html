@@ -13,7 +13,24 @@
 </head>
 
 <body>
-    <div class="container">
+
+    <div id="login-container" class="container">
+        <h1>Admin Panel Login</h1>
+        <div class="action-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="admin@email.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password">
+            </div>
+            <button class="primary-btn" onclick="handleLogin()">Login</button>
+            <div id="loginResult"></div>
+        </div>
+    </div>
+
+    <div id="app-container" class="container" style="display: none;">
         <h1>Coin Clicker Admin Panel</h1>
 
         <div class="tab-container">

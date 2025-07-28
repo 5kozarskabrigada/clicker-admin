@@ -5,6 +5,65 @@ const { createClient } = supabase;
 const sbClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    checkSession();
+});
+
+async function handleLogin() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const loginResult = document.getElementById('loginResult');
+
+    const { data, error } = await sbClient.auth.signInWithPassword({
+        email: email,
+        password: password,
+    });
+
+    if (error) {
+        loginResult.textContent = `Login Failed: ${error.message}`;
+        loginResult.className = 'error';
+        return;
+    }
+
+    checkAdminStatus(data.user);
+}
+
+async function checkSession() {
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (session) {
+        checkAdminStatus(session.user);
+    }
+}
+
+async function checkAdminStatus(user) {
+    const { data: profile, error } = await sbClient
+        .from('users')
+        .select('is_admin')
+        .eq('id', user.id) 
+        .single();
+
+    if (error || !profile) {
+        alert('Could not verify user profile.');
+        return;
+    }
+
+    if (profile.is_admin) {
+        document.getElementById('login-container').style.display = 'none';
+        document.getElementById('app-container').style.display = 'block';
+
+        loadUsers();
+        loadLogs();
+
+    } else {
+     
+        alert('Access Denied. You are not an administrator.');
+        sbClient.auth.signOut(); 
+    }
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
 
     loadUsers();
@@ -75,23 +134,38 @@ async function loadUsers(searchTerm = '') {
 
 async function loadLogs() {
     const logType = document.getElementById('logType').value;
+    let query;
 
 
-    const { data: logs, error } = await sbClient
-        .from(logType)
-        .select(`
-            created_at,
-            action,
-            details,
-            admin:users!${logType}_admin_id_fkey(username),
-            target_user:users!${logType}_target_user_id_fkey(username),
-            user:users!${logType}_user_id_fkey(username)
-        `)
+    if (logType === 'admin_logs') {
+        query = sbClient
+            .from('admin_logs')
+            .select(`
+                created_at,
+                action,
+                details,
+                admin:users(username),
+                target_user:users(username)
+            `);
+    } else { 
+        query = sbClient
+            .from('user_logs')
+            .select(`
+                created_at,
+                action,
+                details,
+                user:users(username)
+            `);
+    }
+
+    const { data: logs, error } = await query
         .order('created_at', { ascending: false })
         .limit(100);
 
     if (error) {
         console.error('Error loading logs:', error.message);
+        const logsList = document.getElementById('logsList');
+        logsList.innerHTML = `<tr><td colspan="3">Error: ${error.message}</td></tr>`;
         return;
     }
 
@@ -104,7 +178,7 @@ async function loadLogs() {
 
         if (logType === 'admin_logs') {
             detailsText = `Admin: <b>@${log.admin?.username || 'system'}</b>, Target: <b>@${log.target_user?.username || 'none'}</b>`;
-        } else { 
+        } else {
             detailsText = `User: <b>@${log.user?.username || 'unknown'}</b>`;
         }
 
@@ -131,7 +205,7 @@ function searchUsers() {
 function editUser(userId, username, currentCoins) {
     const newCoins = prompt(`Editing user @${username}.\nEnter new coin amount:`, currentCoins);
     if (newCoins !== null && !isNaN(newCoins)) {
-        performQuickAction('set_coins', { id: userId, coins: parseInt(newCoins) });
+        performQuickAction('set_coins', { id: userId, coins: parseInt(newCoins, 10) });
     }
 }
 
@@ -145,12 +219,7 @@ async function performAction() {
         return;
     }
 
-
-    const { data: user, error: userError } = await sbClient
-        .from('users')
-        .select('id')
-        .eq('username', username)
-        .single();
+    const { data: user, error: userError } = await sbClient.from('users').select('id').eq('username', username).single();
 
     if (userError || !user) {
         showActionResult('User not found.', 'error');
@@ -158,10 +227,17 @@ async function performAction() {
     }
 
     const params = { id: user.id };
-    if (actionType === 'set_coins' || actionType === 'add_coins') {
-        params.amount = parseInt(actionValue);
+
+    if (actionType === 'set_coins') {
+        params.coins = parseInt(actionValue, 10);
+        if (isNaN(params.coins)) {
+            showActionResult('Invalid coin amount.', 'error');
+            return;
+        }
+    } else if (actionType === 'add_coins') {
+        params.amount = parseInt(actionValue, 10);
         if (isNaN(params.amount)) {
-            showActionResult('Invalid amount specified.', 'error');
+            showActionResult('Invalid amount to add.', 'error');
             return;
         }
     } else if (actionType === 'ban') {
