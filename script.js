@@ -1,5 +1,5 @@
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
+const SUPABASE_URL = 'https://nwqtmkimhwscopczrjtq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53cXRta2ltaHdzY29wY3pyanRxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTU1MTM2OCwiZXhwIjoyMDY3MTI3MzY4fQ.GewdCOp2qlssEf1DaRyD4ObjOgc81JUrAjwdnVKU4sE';
 
 const { createClient } = supabase;
 const sbClient = createClient(SUPABASE_URL, SUPABASE_KEY);
