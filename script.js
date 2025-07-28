@@ -105,7 +105,7 @@ async function loadUsers(searchTerm = '') {
     }
 
     const usersList = document.getElementById('usersList');
-    usersList.innerHTML = ''; 
+    usersList.innerHTML = ''; // Clear existing list
 
     users.forEach(user => {
         const row = document.createElement('tr');
@@ -125,7 +125,8 @@ async function loadUsers(searchTerm = '') {
             <td>${user.coins.toLocaleString()}</td>
             <td>${statusBadge}</td>
             <td>
-                <button onclick="editUser(${user.id}, '${user.username}', ${user.coins})">Edit</button>
+                <!-- THE FIX IS HERE: '${user.id}' is now correctly wrapped in quotes -->
+                <button onclick="editUser('${user.id}', '${user.username || 'anonymous'}', ${user.coins})">Edit</button>
             </td>
         `;
         usersList.appendChild(row);
@@ -136,25 +137,27 @@ async function loadLogs() {
     const logType = document.getElementById('logType').value;
     let query;
 
-
     if (logType === 'admin_logs') {
+      
         query = sbClient
             .from('admin_logs')
             .select(`
                 created_at,
                 action,
                 details,
-                admin:users(username),
-                target_user:users(username)
+                admin:admin_id(username),
+                target_user:target_user_id(username)
             `);
-    } else { 
+        } 
+   
+        else { 
         query = sbClient
             .from('user_logs')
             .select(`
                 created_at,
                 action,
                 details,
-                user:users(username)
+                user:user_id(username)
             `);
     }
 
@@ -170,16 +173,19 @@ async function loadLogs() {
     }
 
     const logsList = document.getElementById('logsList');
-    logsList.innerHTML = ''; 
+    logsList.innerHTML = '';
 
     logs.forEach(log => {
         const row = document.createElement('tr');
         let detailsText = '';
 
         if (logType === 'admin_logs') {
-            detailsText = `Admin: <b>@${log.admin?.username || 'system'}</b>, Target: <b>@${log.target_user?.username || 'none'}</b>`;
+            const adminUsername = log.admin ? log.admin.username : 'system';
+            const targetUsername = log.target_user ? log.target_user.username : 'none';
+            detailsText = `Admin: <b>@${adminUsername}</b>, Target: <b>@${targetUsername}</b>`;
         } else {
-            detailsText = `User: <b>@${log.user?.username || 'unknown'}</b>`;
+            const userUsername = log.user ? log.user.username : 'unknown';
+            detailsText = `User: <b>@${userUsername}</b>`;
         }
 
         if (log.details) {
