@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://nwqtmkimhwscopczrjtq.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53cXRta2ltaHdzY29wY3pyanRxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTU1MTM2OCwiZXhwIjoyMDY3MTI3MzY4fQ.GewdCOp2qlssEf1DaRyD4ObjOgc81JUrAjwdnVKU4sE';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53cXRta2ltaHdzY29wY3pyanRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NTEzNjgsImV4cCI6MjA2NzEyNzM2OH0.o5lvZYZ6vfn7bhgSZw4z29pFG5Y7uphLP1trW2sG2KM';
 
 const { createClient } = supabase;
 const sbClient = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -105,7 +105,7 @@ async function loadUsers(searchTerm = '') {
     }
 
     const usersList = document.getElementById('usersList');
-    usersList.innerHTML = ''; // Clear existing list
+    usersList.innerHTML = ''; 
 
     users.forEach(user => {
         const row = document.createElement('tr');
@@ -131,6 +131,30 @@ async function loadUsers(searchTerm = '') {
         `;
         usersList.appendChild(row);
     });
+}
+
+async function logAdminAction(actionType, targetUserId, details = {}) {
+    const { data: { user } } = await sbClient.auth.getUser();
+
+    if (!user) {
+        console.error("Could not log action: no admin user found.");
+        return;
+    }
+
+    const { error } = await sbClient.from('admin_logs').insert({
+        admin_id: user.id,
+        action: actionType,
+        target_user_id: targetUserId,
+        details: details
+    });
+
+    if (error) {
+        console.error("Failed to write to admin_logs:", error.message);
+    }
+    
+    else {
+        loadLogs();
+    }
 }
 
 async function loadLogs() {
@@ -260,14 +284,13 @@ async function performQuickAction(actionType, params) {
     switch (actionType) {
         case 'set_coins':
             response = await sbClient.from('users').update({ coins: params.coins }).eq('id', params.id);
-            successMessage = `Successfully set coins to ${params.coins}.`;
+            successMessage = `Successfully set coins for user.`;
             break;
         case 'add_coins':
-
             const { data: user } = await sbClient.from('users').select('coins').eq('id', params.id).single();
             if (user) {
                 response = await sbClient.from('users').update({ coins: user.coins + params.amount }).eq('id', params.id);
-                successMessage = `Successfully added ${params.amount} coins.`;
+                successMessage = `Successfully added coins to user.`;
             }
             break;
         case 'ban':
@@ -289,8 +312,11 @@ async function performQuickAction(actionType, params) {
 
     if (response.error) {
         showActionResult(`Error: ${response.error.message}`, 'error');
-    } else {
+    } 
+    
+    else {
         showActionResult(successMessage, 'success');
+        logAdminAction(actionType, params.id, params);
         loadUsers(); 
     }
 }
