@@ -102,6 +102,21 @@ async function loadUsers(searchTerm = '') {
 
     users.forEach(user => {
         const row = document.createElement('tr');
+
+        const lastActiveDate = new Date(user.last_active);
+        const now = new Date();
+        const minutesSinceLastActive = (now - lastActiveDate) / (1000 * 60);
+
+        let onlineStatus;
+        if (minutesSinceLastActive < 5) 
+        {
+            onlineStatus = `<span class="online-status online">Online</span>`;
+        } 
+
+        else {
+            onlineStatus = `<span class="online-status offline">${lastActiveDate.toLocaleString()}</span>`;
+        }
+
         let statusBadge;
         if (user.is_banned) { statusBadge = `<span class="status status-banned">Banned</span>`; }
         else if (user.is_admin) { statusBadge = `<span class="status status-admin">Admin</span>`; }
@@ -114,6 +129,7 @@ async function loadUsers(searchTerm = '') {
             <td>@${user.username || 'anonymous'}</td>
             <td>${userCoins}</td>
             <td>${statusBadge}</td>
+            <td>${onlineStatus}</td> 
             <td>
                 <button onclick="editUser('${user.id}', '${user.username || 'anonymous'}', ${user.coins})">Edit</button>
             </td>

@@ -174,7 +174,21 @@ button:hover,
     color: #c62828;
 }
 
+.online-status {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: white;
+}
 
+.online-status.online {
+    background-color: var(--primary-color);
+}
+
+.online-status.offline {
+    background-color: #757575;
+}
 
 .status {
     padding: 4px 10px;
