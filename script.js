@@ -201,9 +201,19 @@ async function loadLogs() {
             detailsText = `User: <b>@${userUsername}</b>`;
         }
 
-        if (log.details) {
-            detailsText += `<br><small>${JSON.stringify(log.details)}</small>`;
+        if (log.details) 
+            {
+            const formattedDetails = { ...log.details };
+
+            for (const key in formattedDetails) {
+                if (typeof formattedDetails[key] === 'number' && formattedDetails[key] < 1 && formattedDetails[key] > 0) {
+                    formattedDetails[key] = formattedDetails[key].toFixed(10);
+                }
+            }
+
+            detailsText += `<br><small>${JSON.stringify(formattedDetails)}</small>`;
         }
+
 
         row.innerHTML = `
             <td>${new Date(log.created_at).toLocaleString()}</td>

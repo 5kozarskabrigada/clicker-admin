@@ -41,7 +41,10 @@
 
 
         <div id="users" class="tab-content active">
-            <h2>User Management</h2>
+            <h2>
+                User Management
+                <button class="refresh-btn" onclick="loadUsers()">Refresh</button>
+            </h2>
             <input type="text" id="searchUser" placeholder="Search username..." oninput="searchUsers()">
             <div class="table-wrapper">
                 <table>
@@ -61,7 +64,10 @@
 
 
         <div id="logs" class="tab-content">
-            <h2>System Logs</h2>
+            <h2>
+                System Logs
+                <button class="refresh-btn" onclick="loadLogs()">Refresh</button>
+            </h2>
             <div class="form-group">
                 <label for="logType">Log Type:</label>
                 <select id="logType" onchange="loadLogs()">
@@ -85,7 +91,10 @@
 
 
         <div id="actions" class="tab-content">
-            <h2>Quick Actions</h2>
+        <h2>
+            Quick Actions
+            <button class="refresh-btn" onclick="document.getElementById('actionResult').innerHTML = ''">Clear Status</button>
+        </h2>
             <div class="action-form">
                 <div class="form-group">
                     <label for="actionUser">Username (without @)</label>

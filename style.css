@@ -196,3 +196,48 @@ button:hover,
 .status-admin {
     background-color: var(--admin-color);
 }
+
+#login-container h1 {
+    text-align: center;
+    border-bottom: none;
+    margin-bottom: 2rem;
+}
+
+#login-container .action-form {
+    margin: 0 auto;
+}
+
+#loginResult {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 4px;
+    font-weight: 500;
+    min-height: 1.5rem;
+}
+
+#loginResult.error {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+h2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.refresh-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+    background-color: #e0e0e0;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.refresh-btn:hover {
+    background-color: #d1d1d1;
+}
