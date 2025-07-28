@@ -99,7 +99,7 @@
             <div class="action-form">
                 <div class="form-group">
                     <label for="actionUser">Username (without @)</label>
-                    <input type="text" id="actionUser" placeholder="e.g., john_doe">
+                    <input type="text" id="actionUser" placeholder="">
                 </div>
                 <div class="form-group">
                     <label for="actionType">Action</label>
@@ -117,6 +117,21 @@
                 </div>
                 <button class="primary-btn" onclick="performAction()">Execute Action</button>
                 <div id="actionResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="modal-title">Edit User Coins</h2>
+            <p id="modal-username"></p>
+            <div class="form-group">
+                <label for="modal-input">New Coin Amount</label>
+                <input type="text" id="modal-input" placeholder="e.g., 0.0000123456">
+            </div>
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="secondary-btn">Cancel</button>
+                <button id="modal-save-btn" class="primary-btn">Save Changes</button>
             </div>
         </div>
     </div>

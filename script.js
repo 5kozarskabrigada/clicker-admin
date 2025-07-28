@@ -4,6 +4,14 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const sbClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const editModal = document.getElementById('edit-modal');
+const modalTitle = document.getElementById('modal-title');
+const modalUsername = document.getElementById('modal-username');
+const modalInput = document.getElementById('modal-input');
+const modalSaveBtn = document.getElementById('modal-save-btn');
+const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+
 document.addEventListener('DOMContentLoaded', () => {
     checkSession();
 });
@@ -242,12 +250,46 @@ function searchUsers() {
 
 
 function editUser(userId, username, currentCoins) {
-    const newCoins = prompt(`Editing user @${username}.\nEnter new coin amount:`, currentCoins);
 
-    if (newCoins !== null && newCoins.trim() !== '' && !isNaN(newCoins)) 
-    {
-        performQuickAction('set_coins', { id: userId, coins: parseFloat(newCoins) });
+    modalTitle.textContent = `Edit Coins`;
+    modalUsername.textContent = `Editing user: @${username}`;
+
+    modalInput.value = parseFloat(currentCoins).toFixed(16);
+
+    editModal.dataset.editingUserId = userId;
+
+    editModal.classList.remove('hidden');
+    modalInput.focus();
+}
+
+
+modalSaveBtn.onclick = () => {
+    const userId = editModal.dataset.editingUserId;
+    const newCoinsValue = modalInput.value;
+
+    if (userId && newCoinsValue !== null && newCoinsValue.trim() !== '' && !isNaN(newCoinsValue)) {
+        performQuickAction('set_coins', { id: userId, coins: parseFloat(newCoinsValue) });
+        closeModal();
+    } else {
+        alert("Please enter a valid number.");
     }
+};
+
+
+modalCancelBtn.onclick = () => {
+    closeModal();
+};
+
+editModal.onclick = (event) => {
+    if (event.target === editModal) {
+        closeModal();
+    }
+};
+
+function closeModal() 
+{
+    editModal.classList.add('hidden');
+    delete editModal.dataset.editingUserId;
 }
 
 async function performAction() {
