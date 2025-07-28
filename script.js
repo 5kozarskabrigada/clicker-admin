@@ -108,7 +108,7 @@ async function loadUsers(searchTerm = '') {
         row.innerHTML = `
             <td>${user.id.substring(0, 8)}...</td>
             <td>@${user.username || 'anon'}</td>
-            <td>${parseFloat(user.coins).toFixed(10)}</td>
+            <td>${parseFloat(user.coins).toFixed(16)}</td>
             <td>${onlineStatus}</td>
             <td>${statusBadge}</td>
             <td><button onclick="editUser('${user.id}', '${user.username}', user.coins)">Edit</button></td>
@@ -202,7 +202,7 @@ async function loadLogs() {
 
             for (const key in formattedDetails) {
                 if (typeof formattedDetails[key] === 'number' && formattedDetails[key] < 1 && formattedDetails[key] > 0) {
-                    formattedDetails[key] = formattedDetails[key].toFixed(10);
+                    formattedDetails[key] = formattedDetails[key].toFixed(16);
                 }
             }
 
