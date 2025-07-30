@@ -40,6 +40,9 @@ async function checkSession() {
     const { data: { session } } = await sbClient.auth.getSession();
     if (session) {
         checkAdminStatus(session.user);
+    } else {
+        document.getElementById('login-container').style.display = 'block';
+        document.getElementById('app-container').style.display = 'none';
     }
 }
 
@@ -47,54 +50,47 @@ async function checkAdminStatus(user) {
     const { data: profile, error } = await sbClient
         .from('users')
         .select('is_admin')
-        .eq('id', user.id) 
+        .eq('id', user.id)
         .single();
 
     if (error || !profile) {
-        alert('Could not verify user profile.');
+        alert('Could not verify user profile. Please contact support.');
+        sbClient.auth.signOut();
         return;
     }
 
     if (profile.is_admin) {
         document.getElementById('login-container').style.display = 'none';
         document.getElementById('app-container').style.display = 'block';
-
         loadUsers();
         loadLogs();
-
     } else {
-     
         alert('Access Denied. You are not an administrator.');
-        sbClient.auth.signOut(); 
+        sbClient.auth.signOut();
+        checkSession();
     }
 }
 
 
-document.addEventListener('DOMContentLoaded', () => {
-
-    loadUsers();
-    loadLogs();
-});
-
 function openTab(evt, tabName) {
-
     const tabContents = document.getElementsByClassName("tab-content");
     for (let i = 0; i < tabContents.length; i++) {
         tabContents[i].classList.remove('active');
     }
-
 
     const tabLinks = document.getElementsByClassName("tab-link");
     for (let i = 0; i < tabLinks.length; i++) {
         tabLinks[i].classList.remove("active");
     }
 
-
     document.getElementById(tabName).classList.add('active');
     evt.currentTarget.classList.add('active');
 }
 
-
+function formatAdminCoins(amount) {
+    if (typeof amount !== 'number' && typeof amount !== 'string') return '0.000000000';
+    return parseFloat(amount).toFixed(9);
+}
 
 async function loadUsers(searchTerm = '') {
     let query = sbClient.from('users').select('*').order('coins', { ascending: false });
@@ -123,7 +119,7 @@ async function loadUsers(searchTerm = '') {
                 ? `<span class="status status-admin">Admin</span>`
                 : `<span class="status status-active">Active</span>`;
 
-        const userCoins = parseFloat(user.coins).toFixed(16);
+        const userCoins = formatAdminCoins(user.coins);
 
         row.innerHTML = `
             <td class="user-id">${user.id}</td>
@@ -132,7 +128,6 @@ async function loadUsers(searchTerm = '') {
             <td>${onlineStatus}</td>
             <td>${statusBadge}</td>
             <td>
-                <!-- THE FIX IS HERE: '${user.coins}' is now correctly passed as a string -->
                 <button onclick="editUser('${user.id}', '${user.username || 'anonymous'}', '${user.coins}')">Edit</button>
             </td>
         `;
@@ -157,9 +152,7 @@ async function logAdminAction(actionType, targetUserId, details = {}) {
 
     if (error) {
         console.error("Failed to write to admin_logs:", error.message);
-    }
-    
-    else {
+    } else {
         loadLogs();
     }
 }
@@ -169,27 +162,13 @@ async function loadLogs() {
     let query;
 
     if (logType === 'admin_logs') {
-      
         query = sbClient
             .from('admin_logs')
-            .select(`
-                created_at,
-                action,
-                details,
-                admin:admin_id(username),
-                target_user:target_user_id(username)
-            `);
-        } 
-   
-        else { 
+            .select(`created_at, action, details, admin:admin_id(username), target_user:target_user_id(username)`);
+    } else {
         query = sbClient
             .from('user_logs')
-            .select(`
-                created_at,
-                action,
-                details,
-                user:user_id(username)
-            `);
+            .select(`created_at, action, details, user:user_id(username)`);
     }
 
     const { data: logs, error } = await query
@@ -219,19 +198,16 @@ async function loadLogs() {
             detailsText = `User: <b>@${userUsername}</b>`;
         }
 
-        if (log.details) 
-            {
+        if (log.details) {
             const formattedDetails = { ...log.details };
-
+            
             for (const key in formattedDetails) {
-                if (typeof formattedDetails[key] === 'number' && formattedDetails[key] < 1 && formattedDetails[key] > 0) {
-                    formattedDetails[key] = formattedDetails[key].toFixed(16);
+                if ((key.includes('coin') || key.includes('amount')) && typeof formattedDetails[key] === 'number') {
+                    formattedDetails[key] = formatAdminCoins(formattedDetails[key]);
                 }
             }
-
             detailsText += `<br><small>${JSON.stringify(formattedDetails)}</small>`;
         }
-
 
         row.innerHTML = `
             <td>${new Date(log.created_at).toLocaleString()}</td>
@@ -247,21 +223,14 @@ function searchUsers() {
     loadUsers(searchTerm);
 }
 
-
-
 function editUser(userId, username, currentCoins) {
-
     modalTitle.textContent = `Edit Coins`;
     modalUsername.textContent = `Editing user: @${username}`;
-
-    modalInput.value = parseFloat(currentCoins).toFixed(16);
-
+    modalInput.value = formatAdminCoins(currentCoins);
     editModal.dataset.editingUserId = userId;
-
     editModal.classList.remove('hidden');
     modalInput.focus();
 }
-
 
 modalSaveBtn.onclick = () => {
     const userId = editModal.dataset.editingUserId;
@@ -275,7 +244,6 @@ modalSaveBtn.onclick = () => {
     }
 };
 
-
 modalCancelBtn.onclick = () => {
     closeModal();
 };
@@ -286,8 +254,7 @@ editModal.onclick = (event) => {
     }
 };
 
-function closeModal() 
-{
+function closeModal() {
     editModal.classList.add('hidden');
     delete editModal.dataset.editingUserId;
 }
@@ -299,25 +266,18 @@ async function performAction() {
 
     if (!username) { showActionResult('Please enter a username.', 'error'); return; }
 
-    const { data: user, error: userError } = await sbClient.from('users').select('id').eq('username', username).single();
+    const { data: user, error: userError } = await sbClient.from('users').select('id, coins').eq('username', username).single();
     if (userError || !user) { showActionResult('User not found.', 'error'); return; }
 
+    const params = { id: user.id, coins: user.coins };
 
-    const params = { id: user.id };
-
-
-    if (actionType === 'set_coins' || actionType === 'add_coins') 
-        {
+    if (actionType === 'set_coins' || actionType === 'add_coins') {
         params.amount = parseFloat(actionValue);
-
-        if (isNaN(params.amount)) 
-            {
+        if (isNaN(params.amount)) {
             showActionResult('Invalid amount specified.', 'error');
             return;
         }
-    } 
-    else if (actionType === 'ban') 
-        {
+    } else if (actionType === 'ban') {
         params.reason = actionValue || 'No reason provided';
     }
 
@@ -327,70 +287,49 @@ async function performAction() {
 async function performQuickAction(actionType, params) {
     let response = {};
     let successMessage = '';
+    let logDetails = { ...params };
+    delete logDetails.id; 
 
     switch (actionType) {
         case 'set_coins':
-            response = await sbClient.from('users')
-            .update({ coins: params.coins || params.amount })
-            .eq('id', params.id);
-
+            response = await sbClient.from('users').update({ coins: params.amount }).eq('id', params.id);
             successMessage = `Successfully set coins for user.`;
+            logDetails = { new_amount: params.amount, old_amount: params.coins };
             break;
 
         case 'add_coins':
-            const { data: user } = await sbClient
-            .from('users')
-            .select('coins')
-            .eq('id', params.id)
-            .single();
-
-            if (user) 
-                {
-                response = await sbClient
-                .from('users')
-                .update({ coins: user.coins + params.amount })
-                .eq('id', params.id);
-                successMessage = `Successfully added coins to user.`;
-            }
+            response = await sbClient.from('users').update({ coins: params.coins + params.amount }).eq('id', params.id);
+            successMessage = `Successfully added coins to user.`;
+            logDetails = { amount_added: params.amount, old_total: params.coins, new_total: params.coins + params.amount };
             break;
 
         case 'ban':
-            response = await sbClient
-            .from('users')
-            .update({ is_banned: true, banned_reason: params.reason })
-            .eq('id', params.id);
+            response = await sbClient.from('users').update({ is_banned: true, banned_reason: params.reason }).eq('id', params.id);
             successMessage = `Successfully banned user.`;
+            logDetails = { reason: params.reason };
             break;
 
         case 'unban':
-            response = await sbClient
-            .from('users')
-            .update({ is_banned: false, banned_reason: null })
-            .eq('id', params.id);
+            response = await sbClient.from('users').update({ is_banned: false, banned_reason: null }).eq('id', params.id);
             successMessage = `Successfully unbanned user.`;
+            logDetails = {};
             break;
 
         case 'make_admin':
-            response = await sbClient
-            .from('users')
-            .update({ is_admin: true })
-            .eq('id', params.id);
+            response = await sbClient.from('users').update({ is_admin: true }).eq('id', params.id);
             successMessage = `Successfully granted admin privileges.`;
+            logDetails = {};
             break;
 
-        default: showActionResult('Unknown action.', 'error'); return;
+        default:
+            showActionResult('Unknown action.', 'error');
+            return;
     }
 
-    if (response.error) 
-    {
+    if (response.error) {
         showActionResult(`Error: ${response.error.message}`, 'error');
-    } 
-
-    else 
-    {
+    } else {
         showActionResult(successMessage, 'success');
-        const logDetails = { ...params };
-        if (logDetails.coins) { logDetails.amount = logDetails.coins; delete logDetails.coins; }
         logAdminAction(actionType, params.id, logDetails);
         loadUsers();
     }
@@ -400,5 +339,5 @@ async function performQuickAction(actionType, params) {
 function showActionResult(message, type) {
     const resultDiv = document.getElementById('actionResult');
     resultDiv.textContent = message;
-    resultDiv.className = type; 
+    resultDiv.className = type;
 }
